@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.10)
+project(MyProject)
+
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+
+find_package(Boost REQUIRED)
+
+add_executable(MyProject main.cpp)
+target_link_libraries(MyProject PRIVATE Boost::boost)
