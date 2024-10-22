@@ -105,6 +105,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Opsik\source\repos\root\vcpkg\vcpkg_installed\vcpkg\pkgs\muparser_x64-windows\debug\lib\pkgconfig;C:\Users\Opsik\source\repos\root\vcpkg\vcpkg_installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,7 +131,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Linear_Equation.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Quadratic_Equations.cpp" />
+    <ClCompile Include="root.cpp" />
+    <ClCompile Include="Root_from_Root.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Linear_Equation.h" />
+    <ClInclude Include="Quadratic_Equations.h" />
+    <ClInclude Include="root.h" />
+    <ClInclude Include="Root_from_Root.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
