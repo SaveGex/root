@@ -36,7 +36,7 @@ void Root_from_Root::solveEquation() {
 
         // go through a variants for find out the root
         double step = 0.05;  // Step of x
-        for (x = -1000; x < 1000; x += step) {
+        for (x = -100; x < 100; x += step) {
             parser.SetExpr(leftSide);
             double leftVal = parser.Eval();
             parser.SetExpr(rightSide);
