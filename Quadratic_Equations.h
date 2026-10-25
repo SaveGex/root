@@ -1,17 +1,22 @@
 #pragma once
+
 #include "root.h"
+#include <utility>
+
+struct QuadraticCoefficients {
+    double a;
+    double b;
+    double c;
+};
 
 class Quadratic_Equations : public Root {
-private:
-    string equation = "1 * x^2 + -3 * x + 2 = 0";
-    string result = "";
-
 public:
-    Quadratic_Equations(string equation) : equation{equation}{}
-    Quadratic_Equations() {}
-    ~Quadratic_Equations() {}
-    FractionEquation parseEquation() override;
+    explicit Quadratic_Equations(std::string equation = "x^2 - 3*x + 2 = 0")
+        : equation_(std::move(equation)) {}
+    QuadraticCoefficients parseEquation() const;
     void solveEquation() override;
-    string require_answer() override { return result; }
-    void change_equation(string expression);
+    void change_equation(std::string expression);
+
+private:
+    std::string equation_;
 };

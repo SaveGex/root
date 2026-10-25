@@ -1,29 +1,56 @@
-﻿#include <iostream>
-#include "root.h"
 #include "Linear_Equation.h"
 #include "Quadratic_Equations.h"
 #include "Root_from_Root.h"
-using namespace std;
 
-int main() {
-    //cout << "\033[31mATTENTION\033[0m" << endl;
-    //cout << "NO HE DOESN'T SLEEP. HE TO COUNTING!!!" << endl;
-    //Root* objects[3]{};
-    //objects[0] = new Linear_Equation();
-    //objects[1] = new Quadratic_Equations();
-    //objects[2] = new Root_from_Root();
-    //for (auto obj : objects) {
-    //    obj->solveEquation();
-    //    cout<<obj->require_answer();
-    //}
-    //for (auto obj : objects) {
-    //    delete obj;
-    //}
-    ////code can recieve other equation. But i tired make of this... So you can just to change equation in classes.
-    Quadratic_Equations quadratic_smthg{};
-    quadratic_smthg.change_equation("4 * x^2 - 3 * x + 1 = 0");
-    quadratic_smthg.solveEquation();
-    cout << quadratic_smthg.require_answer();
+#include <exception>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
-    return 0;
+namespace {
+void usage() {
+    std::cout << "Usage: equation-solver [quadratic|fraction|numeric] \"equation\"\n"
+                 "No arguments: run three examples.\n"
+                 "Example: equation-solver quadratic \"x^2 - 3*x + 2 = 0\"\n";
+}
+void run(Root& solver) {
+    solver.solveEquation();
+    std::cout << solver.require_answer() << '\n';
+}
+}
+
+int main(int argc, char* argv[]) {
+    try {
+        if (argc == 1) {
+            std::vector<std::unique_ptr<Root>> examples;
+            examples.push_back(std::make_unique<Quadratic_Equations>());
+            examples.push_back(std::make_unique<Linear_Equation>());
+            examples.push_back(std::make_unique<Root_from_Root>());
+            for (auto& example : examples) run(*example);
+            return 0;
+        }
+        if (argc == 2 && std::string(argv[1]) == "--help") {
+            usage();
+            return 0;
+        }
+        if (argc != 3) {
+            usage();
+            return 2;
+        }
+        std::unique_ptr<Root> solver;
+        const std::string mode = argv[1];
+        if (mode == "quadratic") solver = std::make_unique<Quadratic_Equations>(argv[2]);
+        else if (mode == "fraction") solver = std::make_unique<Linear_Equation>(argv[2]);
+        else if (mode == "numeric") solver = std::make_unique<Root_from_Root>(argv[2]);
+        else {
+            usage();
+            return 2;
+        }
+        run(*solver);
+        return 0;
+    } catch (const std::exception& error) {
+        std::cerr << "Error: " << error.what() << '\n';
+        return 1;
+    }
 }

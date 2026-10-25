@@ -1,0 +1,8 @@
+# Send only build inputs, not local dependencies, Git history or Windows output.
+*
+!Dockerfile
+!CMakeLists.txt
+!*.cpp
+!*.h
+!tests/
+!tests/**

@@ -1,100 +1,87 @@
-#include <map>
 #include "Quadratic_Equations.h"
 
-FractionEquation Quadratic_Equations::parseEquation() {
-    boost::regex expr(R"(([-+]?\s*\d*\.?\d+)\s*\*\s*x\^2\s*([-+]\s*\-?\d*\.?\d*)\s*\*\s*x\s*([-+]\s*\-?\d*\.?\d*)\s*=\s*0)");
-    boost::smatch matches;
-//    //пройтись по виразу і якщо до пробілу є тільки знак видалити його з пробілом
-//    auto sanitize{ [](string& expr) {
-//        size_t enter_pos {};
-//        bool digit = false;
-//        bool space = false;
-//        for (int i = 0; i < expr.size(); i++) {
-//            if (expr[i] == ' ' && !space) {
-//                space = true;
-//                enter_pos = i;
-//            }
-//            if (isdigit(expr[i])) {
-//                digit = true;
-//            }
-//            if (expr[i] == ' ' && space) {
-//                expr.erase(0, enter_pos+1);
-//                
-//                return expr;
-//            }
-//        }
-//}};
+#include <boost/regex.hpp>
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
 
-    if (boost::regex_search(this->equation, matches, expr)) {
-        FractionEquation eq;
-        eq.numerator = matches[1].str();
-        eq.denominator = matches[2].str();
-        // Зберігаємо третю змінну `c` в деномінатор для узгодженості
-        eq.denominator += " " + matches[3].str();
-        //sanitize(eq.denominator);
-        return eq;
-    }
-    throw invalid_argument("Invalid equation format");
+namespace {
+double coefficient(const std::string& value) {
+    if (value.empty() || value == "+") return 1.0;
+    if (value == "-") return -1.0;
+    const double result = std::stod(value);
+    if (!std::isfinite(result)) throw std::invalid_argument("Coefficients must be finite.");
+    return result;
+}
 }
 
+QuadraticCoefficients Quadratic_Equations::parseEquation() const {
+    std::string compact;
+    for (unsigned char character : equation_) {
+        if (!std::isspace(character)) compact += static_cast<char>(character);
+    }
+    // Preserve support for the original examples written as '+ -3*x'.
+    for (auto pos = compact.find("+-"); pos != std::string::npos; pos = compact.find("+-")) {
+        compact.replace(pos, 2, "-");
+    }
+    const std::string number = R"((?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)";
+    const boost::regex expression("^([+-]?(?:" + number + ")?)\\*?x\\^2([+-](?:" +
+                                  number + ")?)\\*?x([+-]" + number + ")=0$");
+    boost::smatch match;
+    if (!boost::regex_match(compact, match, expression)) {
+        throw std::invalid_argument("Expected a*x^2 + b*x + c = 0 (include all three terms).");
+    }
+    return {coefficient(match[1].str()), coefficient(match[2].str()), coefficient(match[3].str())};
+}
 
 void Quadratic_Equations::solveEquation() {
-    FractionEquation fracEq = parseEquation();
-
-    auto space_pos{ [](string expr) {
-
-        map<string, int> coords;
-        bool space{}, digits{};
-        int first_pos{-1}, last_pos{};
-        for (int i = 0; i < expr.size(); i++) {
-            if ((expr[i] == ' ' || expr[i] == '+' || expr[i] == '-' || expr[i] == '*' || expr[i] == '^' || isdigit(expr[i]) ) && first_pos == -1) {
-                first_pos = i;
-            }
-            if (isdigit(expr[i])) {
-                digits = true;
-            }
-            if (expr[i] == ' ' && first_pos) {
-                space = true;
-            }
-            if (expr[i] == ' ' && !digits) {
-                space = false;
-                first_pos = -1;
-            }
-            else if (first_pos != -1 && (expr[i] == ' ' || i == expr.size()-1) && digits) {
-                last_pos = i;
-                coords["first"] = first_pos;
-                coords["last"] = last_pos;
-
-                return coords;
-            }
+    result_.clear();
+    roots_.clear();
+    auto [a, b, c] = parseEquation();
+    if (a == 0.0) {
+        if (b != 0.0) {
+            const double root = -c / b;
+            if (!std::isfinite(root)) throw std::overflow_error("Root is outside the supported numeric range.");
+            roots_.push_back(root);
+        } else {
+            result_ = equation_ + (c == 0.0 ? ": Infinitely many solutions" : ": No solution");
+            return;
         }
-} };
-
-    double a = std::stod(fracEq.numerator);
-    double b = std::stod(fracEq.denominator.substr(space_pos(fracEq.denominator)["first"], space_pos(fracEq.denominator)["last"]));
-    fracEq.denominator.erase(0, space_pos(fracEq.denominator)["last"]);
-    double c = std::stod(fracEq.denominator.substr(space_pos(fracEq.denominator)["first"], space_pos(fracEq.denominator)["last"]));
-
-
-    double D = b * b - 4 * a * c; // Обчислення дискримінанта
-
-    if (D > 0) {
-        double x1 = (-b + sqrt(D)) / (2 * a);
-        double x2 = (-b - sqrt(D)) / (2 * a);
-        result += format("\n{}: x1 = {}, x2 = {}", equation, to_string(x1), to_string(x2));
+    } else {
+        // Scaling avoids overflow in b*b and 4*a*c for large finite coefficients.
+        const double scale = std::max({std::abs(a), std::abs(b), std::abs(c)});
+        a /= scale;
+        b /= scale;
+        c /= scale;
+        if (a == 0.0) throw std::overflow_error("Coefficient range is too large.");
+        const double discriminant = b * b - 4.0 * a * c;
+        const double tolerance = 8.0 * std::numeric_limits<double>::epsilon() *
+                                 (b * b + std::abs(4.0 * a * c));
+        if (discriminant < -tolerance) {
+            result_ = equation_ + ": No real roots";
+            return;
+        }
+        if (std::abs(discriminant) <= tolerance) {
+            roots_.push_back(-b / (2.0 * a));
+        } else {
+            // Avoid subtracting nearly equal numbers when calculating one root.
+            const double q = -0.5 * (b + std::copysign(std::sqrt(discriminant), b));
+            roots_ = {q / a, c / q};
+            std::sort(roots_.begin(), roots_.end());
+        }
+        for (double root : roots_) {
+            if (!std::isfinite(root)) throw std::overflow_error("Root is outside the supported numeric range.");
+        }
     }
-    else if (D == 0) {
-        double x = -b / (2 * a);
-        result += format("\n{}: x = {}", equation, to_string(x));
-    }
-    else {
-        result += format("\n{}: No real roots", equation);
-    }
+    result_ = equation_ + ": ";
+    if (roots_.size() == 1) result_ += "x = " + formatNumber(roots_[0]);
+    else result_ += "x1 = " + formatNumber(roots_[0]) + ", x2 = " + formatNumber(roots_[1]);
 }
 
-void Quadratic_Equations::change_equation(string expression)
-{
-    this->result.clear();
-    this->equation = expression;
+void Quadratic_Equations::change_equation(std::string expression) {
+    equation_ = std::move(expression);
+    result_.clear();
+    roots_.clear();
 }
-

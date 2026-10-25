@@ -1,15 +1,16 @@
 #pragma once
+
 #include "root.h"
+#include <utility>
 
-using namespace std;
-
+// Historical name: solves a fraction equal to zero, not only linear equations.
 class Linear_Equation : public Root {
-private:
-    string equation = "(x^2 - 4) / (x + 2) = 0";
-    string result = "";
 public:
-    FractionEquation parseEquation() override;
+    explicit Linear_Equation(std::string equation = "(x^2 - 4) / (x + 2) = 0")
+        : equation_(std::move(equation)) {}
+    FractionEquation parseEquation() const;
     void solveEquation() override;
-    string require_answer() { return result; }
-    ~Linear_Equation() {}
+
+private:
+    std::string equation_;
 };

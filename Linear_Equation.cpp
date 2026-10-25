@@ -1,42 +1,23 @@
 #include "Linear_Equation.h"
 
-FractionEquation Linear_Equation::parseEquation() {
-    // Оновлений регулярний вираз для дробових рівнянь
-    boost::regex expr(R"(\(\s*([^/]+)\s*\)\s*/\s*\(\s*([^\)]+)\s*\)\s*=\s*0)");
-    boost::smatch matches;
+#include <boost/regex.hpp>
+#include <stdexcept>
 
-    if (boost::regex_search(equation, matches, expr)) {
-        FractionEquation fracEq;
-        fracEq.numerator = matches[1].str();
-        fracEq.denominator = matches[2].str();
-        return fracEq;
+FractionEquation Linear_Equation::parseEquation() const {
+    // Deliberately limited grammar: no nested parentheses.
+    static const boost::regex expression(R"(^\s*\(([^()]+)\)\s*/\s*\(([^()]+)\)\s*=\s*0\s*$)");
+    boost::smatch match;
+    if (!boost::regex_match(equation_, match, expression)) {
+        throw std::invalid_argument("Expected (numerator) / (denominator) = 0; nested parentheses are not supported.");
     }
-    throw invalid_argument("Invalid equation format");
+    return {match[1].str(), match[2].str()};
 }
 
 void Linear_Equation::solveEquation() {
-    FractionEquation fracEq = parseEquation();
-    mu::Parser p;
-    double x = 0.0;
-    p.DefineVar("x", &x);
-
-
-    // Check zero numerator
-    p.SetExpr(fracEq.numerator);
-    if (p.Eval() == 0.0) {
-        result += to_string(x); // Root found
-        return;
-    }
-
-    // Solve root of numerator
-    p.SetExpr(fracEq.numerator);
-    for (double test_x = -100.0; test_x <= 100.0; test_x += 0.01) {
-        x = test_x;
-        if (abs(p.Eval()) < 1e-3) {
-            result += format("\n{}: {}",this->equation, to_string(x));
-            return;
-        }
-    }
-
-    throw runtime_error("Root not found within the range");
+    result_.clear();
+    roots_.clear();
+    const auto fraction = parseEquation();
+    const double root = findGridRoot(fraction.numerator, "0", fraction.denominator);
+    roots_.push_back(root);
+    result_ = equation_ + ": x ~= " + formatNumber(root) + " (grid search)";
 }
